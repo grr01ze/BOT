@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "discord.js": "^14.20.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2"
+  },
+  "name": "admin",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
+  "scripts": {
+    "start": "node server.js"
+}
