@@ -7,6 +7,8 @@ const express = require('express');
 const { Client, GatewayIntentBits } = require('discord.js');
 
 const app = express();
+const cors = require("cors");
+app.use(cors());
 app.use(express.json());
 
 const client = new Client({
