@@ -3,16 +3,21 @@ require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 console.log("Chargement du .env...");
 console.log("DISCORD_TOKEN (env) :", process.env.DISCORD_TOKEN || "non chargé");
+
 const express = require('express');
+const cors = require('cors');
 const { Client, GatewayIntentBits } = require('discord.js');
 
 const app = express();
-const cors = require("cors");
 app.use(cors());
 app.use(express.json());
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
+  ],
 });
 
 client.once('ready', () => {
@@ -22,17 +27,21 @@ client.once('ready', () => {
 client.login(process.env.DISCORD_TOKEN);
 
 app.post('/send', async (req, res) => {
-  const { channelId, message } = req.body;
+  const { channelId, imageUrl, description } = req.body;
 
-  if (!channelId || !message) {
-    return res.status(400).send('channelId et message requis');
+  if (!channelId || !imageUrl) {
+    return res.status(400).send('channelId et imageUrl requis');
   }
 
   try {
     const channel = await client.channels.fetch(channelId);
     if (!channel) return res.status(404).send('Salon introuvable');
 
-    await channel.send(message);
+    await channel.send({
+      content: description || '',
+      files: [imageUrl]
+    });
+
     res.send('Message envoyé');
   } catch (err) {
     console.error(err);
