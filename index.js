@@ -1,55 +1,80 @@
-const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
-
-console.log("Chargement du .env...");
-console.log("DISCORD_TOKEN (env) :", process.env.DISCORD_TOKEN || "non chargé");
+// Sur votre serveur Railway - bot-production-e4ec.up.railway.app
 
 const express = require('express');
-const cors = require('cors');
 const { Client, GatewayIntentBits } = require('discord.js');
+const cors = require('cors');
 
 const app = express();
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+
 app.use(cors());
 app.use(express.json());
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
-  ],
-});
-
-client.once('ready', () => {
-  console.log(`Bot connecté en tant que ${client.user.tag}`);
-});
-
-client.login(process.env.DISCORD_TOKEN);
-
-app.post('/send', async (req, res) => {
-  const { channelId, imageUrl, description } = req.body;
-
-  if (!channelId || !imageUrl) {
-    return res.status(400).send('channelId et imageUrl requis');
-  }
-
+// Endpoint pour recevoir les messages du panel
+app.post('/api/send-message', async (req, res) => {
   try {
-    const channel = await client.channels.fetch(channelId);
-    if (!channel) return res.status(404).send('Salon introuvable');
+    const { channelId, content, metadata } = req.body;
 
-    await channel.send({
-      content: description || '',
-      files: [imageUrl]
+    // Validation
+    if (!channelId || !content) {
+      return res.status(400).json({ 
+        error: 'channelId et content sont requis' 
+      });
+    }
+
+    // Récupérer le salon Discord
+    const channel = await client.channels.fetch(channelId);
+    
+    if (!channel || !channel.isTextBased()) {
+      return res.status(404).json({ 
+        error: 'Salon non trouvé ou non textuel' 
+      });
+    }
+
+    // Envoyer le message
+    const message = await channel.send({
+      content: content, // L'URL de l'image
+      // Optionnel : ajouter un embed pour plus de style
+      embeds: metadata ? [{
+        title: `📋 ${metadata.category} - ${metadata.week}`,
+        image: { url: content },
+        color: 0xd4af37, // Couleur or
+        timestamp: new Date(),
+        footer: { text: 'Envoyé depuis Godplace Panel' }
+      }] : undefined
     });
 
-    res.send('Message envoyé');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Erreur serveur');
+    // Log pour debug
+    console.log(`Message envoyé dans ${channel.name}: ${message.id}`);
+
+    res.json({ 
+      success: true, 
+      messageId: message.id,
+      channelName: channel.name 
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi:', error);
+    res.status(500).json({ 
+      error: 'Erreur interne du serveur',
+      details: error.message 
+    });
   }
 });
+
+// Endpoint de santé
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    bot: client.user ? 'Connecté' : 'Déconnecté',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Connexion du bot
+client.login(process.env.DISCORD_TOKEN);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`API en écoute sur le port ${PORT}`);
+  console.log(`Serveur démarré sur le port ${PORT}`);
 });
